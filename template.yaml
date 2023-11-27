@@ -51,6 +51,40 @@ Resources:
         Sourcemap: true
         EntryPoints:
         - app.ts
+    
+  UpdateFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource:
+    Properties:
+      CodeUri: update/
+      Handler: app.lambdaHandler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DynamoDBTable
+      Runtime: nodejs18.x
+      Architectures:
+      - x86_64
+      # Events: TODO
+      #   HelloWorld:
+      #     Type: Api # More info about API Event Source:
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - app.ts
+  
+  DynamoDBTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: ID
+        Type: String
+      TableName: team17-registry
 
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
