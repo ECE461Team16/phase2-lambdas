@@ -2,8 +2,14 @@ import AdmZip from 'adm-zip';
 import * as https from 'https';
 
 export function getZipData(binaryData: Buffer): [string, string, string] | null {
-    const zip = new AdmZip(binaryData);
-    const zipEntries = zip.getEntries();
+    let zipEntries;
+    try {
+        const zip = new AdmZip(binaryData);
+        zipEntries = zip.getEntries();
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
 
     if (zipEntries.length > 0) {
         let repository = '';
@@ -28,10 +34,14 @@ export function getZipData(binaryData: Buffer): [string, string, string] | null 
     }
 }
 
-export function getDataFromUrl(url: string): Promise<Buffer> {
+// broken, need a reliable source to find zips of the packages
+export function getZipFromUrl(url: string): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
         https
-            .get(url + 'archive/main.zip', (response) => {
+            .get(url.replace('https://', 'https://codeload.') + '/archive/refs/heads/master.zip', (response) => {
+                console.log(url.replace('https://', 'https://codeload.') + '/archive/refs/heads/master.zip');
+                console.log('response', response.statusCode);
+                // console.log('response', response);
                 if (response.statusCode !== 200) {
                     reject(new Error('Filed to download file from url'));
                     return;

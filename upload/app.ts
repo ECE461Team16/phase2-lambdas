@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getZipData, getDataFromUrl } from './utils';
+import { getZipData, getZipFromUrl } from './utils';
 import { Package } from './models';
+import AWS from 'aws-sdk';
 
 /**
  *
@@ -29,7 +30,12 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             };
         }
 
-        let packageData: Package;
+        let packageData: Package = {
+            name: '',
+            version: '',
+            repository: '',
+            binaryData: Buffer.from(''),
+        };
 
         if (content) {
             console.log('using content string');
@@ -52,11 +58,13 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 repository,
                 binaryData,
             };
+
+            console.log('packageData', packageData);
         } else if (url) {
             console.log('using url');
 
             const name = url.split('/').pop();
-            const binaryData = await getDataFromUrl(url);
+            const binaryData = await getZipFromUrl(url);
             const [, , version] = getZipData(binaryData) || ['', '', ''];
 
             packageData = {
@@ -65,14 +73,52 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 repository: url,
                 binaryData,
             };
+        } else {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    message: 'Malformed request',
+                }),
+            };
         }
 
-        // check if the package exists in the directory
+        const s3 = new AWS.S3();
+        const params = {
+            Bucket: 'ingested-package-storage',
+            Key: `${packageData.name}.zip`,
+            Body: packageData.binaryData,
+        };
+        await s3
+            .upload(params, (err: Error, data: any) => {
+                console.log(err, data);
+            })
+            .promise();
+
+        const dynamoClient = new AWS.DynamoDB();
+        const input = {
+            Item: {
+                id: {
+                    S: packageData.name.toLowerCase(),
+                },
+                version: {
+                    S: packageData.version,
+                },
+                name: {
+                    S: packageData.name,
+                },
+            },
+            TableName: 'registry',
+        };
+        await dynamoClient
+            .putItem(input, (err: Error, data: any) => {
+                console.log(err, data);
+            })
+            .promise();
 
         return {
             statusCode: 200,
             body: JSON.stringify({
-                message: 'hello world',
+                input,
             }),
         };
     } catch (err) {

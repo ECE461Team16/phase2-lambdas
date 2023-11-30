@@ -1,9 +1,12 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   phase2-lambdas
 
   Lambda functions for phase 2
+Globals:
+  Function:
+    Timeout: 29
 
 Resources:
   UploadFunction:
@@ -11,9 +14,9 @@ Resources:
     Properties:
       CodeUri: upload/
       Handler: app.lambdaHandler
-      Runtime: nodejs18.x
+      Runtime: nodejs16.x
       Architectures:
-      - x86_64
+        - x86_64
       # Events: TODO
       #   HelloWorld:
       #     Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -27,30 +30,9 @@ Resources:
         Target: es2020
         Sourcemap: true
         EntryPoints:
-        - app.ts
-
-  RateFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      CodeUri: rate/
-      Handler: app.lambdaHandler
-      Runtime: nodejs18.x
-      Architectures:
-      - x86_64
-      # Events: TODO
-      #   HelloWorld:
-      #     Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-      #     Properties:
-      #       Path: /hello
-      #       Method: get
-    Metadata: # Manage esbuild properties
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: true
-        Target: es2020
-        Sourcemap: true
-        EntryPoints:
-        - app.ts
+          - app.ts
+        External:
+          - "aws-sdk"
 
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
@@ -64,8 +46,7 @@ Resources:
     Properties:
       ResourceGroupName:
         Ref: ApplicationResourceGroup
-      AutoConfigurationEnabled: 'true'
-
+      AutoConfigurationEnabled: "true"
 # TODO
 # Outputs:
 #   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
