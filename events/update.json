@@ -6,7 +6,7 @@
     },
     "data": {
       "Content": "changedstring",
-      "URL": "string",
+      "URL": "https://github.com/cloudinary/cloudinary_npm",
       "JSProgram": "string"
     }
   }

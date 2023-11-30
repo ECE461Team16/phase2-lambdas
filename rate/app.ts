@@ -1,58 +1,50 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDB } from 'aws-sdk';
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
+import AWS from 'aws-sdk';
+AWS.config.update({ region: 'us-east-1' });
 
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
-const TableName = "team17-registry"
-
-//TODO: Update score, Update S3 bucket
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const metadata = JSON.parse(JSON.stringify(event)).metadata;
-  const data = JSON.parse(JSON.stringify(event)).data;
-
-  const getCommand = new GetCommand({
-    TableName: TableName,
-    Key: {
-      "ID": metadata.ID,
-    },
-  });
-
-  const updateCommand = new UpdateCommand({
-    TableName: TableName,
-    Key: {
-      "ID": metadata.ID,
-    },
-    UpdateExpression: "set Version = :Version, Content = :Content",
-    ExpressionAttributeValues: {
-      ':Version': metadata.Version,
-      ':Content': data.Content
-    },
-  });
+/*
+  * This is the handler for the /app endpoint. It invokes the phase1code lambda function
+  * and returns the result.
+  * example input event: {"URL": "https://github.com/cloudinary/cloudinary_npm"}
+  * example output: "statusCode": 200, "body": {"URL": "https://github.com/cloudinary/cloudinary_npm", "NET_SCORE": 19.0504, "RAMP_UP_SCORE": 0.52, "CORRECTNESS_SCORE": 1, "BUS_FACTOR_SCORE": 0.0816, "RESPONSIVE_MAINTAINER_SCORE": 0.2, "LICENSE_SCORE": 1, "DEPENDENCE_SCORE": 0, "REVIEWED_CODE_SCORE": 124.3894}}
+  * Call this function by:
+   
+    import AWS from 'aws-sdk';
+    
+    const lambda = new AWS.Lambda();
+    const params = {
+    FunctionName: 'RateFunction-RateFunction-tYak9soW0m0J',
+    InvocationType: 'RequestResponse',
+    // LogType: 'Tail',
+    Payload: JSON.stringify(event, null, 2) 
+    };
   
-  try {
-    const result = await docClient.send(getCommand);
-    console.log(result.Item);
-    if (result.Item) {
-      // Update the item
-      await docClient.send(updateCommand);
-      
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Version is updated' }),
-      };
-    } else {
-      console.log('Package does not exist');
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Package does not exist' }),
-      };
-    }
-  } catch (error) {
+  *
+*/
+export const lambdaHandler = async (event:any): Promise<APIGatewayProxyResult> => {
+  
+  const lambda = new AWS.Lambda();
+  const params = {
+    FunctionName: 'phase1code',
+    InvocationType: 'RequestResponse',
+    // LogType: 'Tail',
+    Payload: JSON.stringify(event, null, 2) 
+  };
+  const response = await lambda.invoke(params).promise();
+
+  if (response.StatusCode !== 200) {
+    // console.log('Error in lambda invoke', response);
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'There is missing field(s) in the PackageID/AuthenticationToken or it is formed improperly, or the AuthenticationToken is invalid.' }),
+      statusCode: 500,
+      body: JSON.parse(response.Payload?.toString() || '{}')
     };
   }
+
+  const parsedPayload = JSON.parse(response.Payload?.toString() || '{}');
+  const responseBody = parsedPayload.body ? JSON.parse(parsedPayload.body) : {};
+
+  return {
+    statusCode: 200,
+    body: responseBody
+  };
 }

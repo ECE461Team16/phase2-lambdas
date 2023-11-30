@@ -4,6 +4,9 @@ Description: >
   phase2-lambdas
 
   Lambda functions for phase 2
+Globals:
+  Function:
+    Timeout: 29
 
 Resources:
   UploadFunction:
@@ -29,12 +32,37 @@ Resources:
         EntryPoints:
         - app.ts
 
+  # InvokeOtherLambda:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     RoleName: lambdaexecute
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - lambda.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
+  #     Policies:
+  #       - PolicyName: lambdaexecute
+  #         PolicyDocument:
+  #           Version: '2012-10-17'
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - lambda:InvokeFunction
+  #               Resource: !GetAtt RateFunction.Arn
+
   RateFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: rate/
       Handler: app.lambdaHandler
       Runtime: nodejs18.x
+      MemorySize: 1024
+      Role: !GetAtt InvokeOtherLambda.Arn
       Architectures:
       - x86_64
       # Events: TODO
@@ -64,6 +92,8 @@ Resources:
         Variables:
           TABLE_NAME: !Ref DynamoDBTable
       Runtime: nodejs18.x
+      MemorySize: 1024
+      Role: !GetAtt InvokeOtherLambda.Arn
       Architectures:
       - x86_64
       # Events: TODO
@@ -85,6 +115,8 @@ Resources:
         Name: ID
         Type: String
       TableName: team17-registry
+  
+  
 
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
