@@ -35,6 +35,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             version: '',
             repository: '',
             binaryData: Buffer.from(''),
+            ratings: '',
         };
 
         if (content) {
@@ -57,6 +58,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 version,
                 repository,
                 binaryData,
+                ratings: '',
             };
 
             console.log('packageData', packageData);
@@ -72,6 +74,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 version,
                 repository: url,
                 binaryData,
+                ratings: '',
             };
         } else {
             return {
@@ -81,6 +84,21 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 }),
             };
         }
+
+        const lambda = new AWS.Lambda();
+        const lambda_params = {
+            FunctionName: 'RateFunction-RateFunction-tYak9soW0m0J',
+            InvocationType: 'RequestResponse',
+            // LogType: 'Tail',
+            Payload: JSON.stringify({ URL: packageData.repository }, null, 2),
+        };
+        const score = await lambda
+            .invoke(lambda_params, function (err: Error, data: any) {
+                console.log(err, data);
+            })
+            .promise();
+        console.log('scores', JSON.parse(score.Payload as string).body.NET_SCORE);
+        packageData.ratings = JSON.parse(score.Payload as string).body;
 
         const s3 = new AWS.S3();
         const params = {
@@ -105,6 +123,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 },
                 name: {
                     S: packageData.name,
+                },
+                ratings: {
+                    S: JSON.stringify(packageData.ratings),
                 },
             },
             TableName: 'registry',

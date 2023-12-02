@@ -7,4 +7,5 @@ export interface Package {
     version: string;
     repository: string;
     binaryData: Buffer;
+    ratings: string;
 }
