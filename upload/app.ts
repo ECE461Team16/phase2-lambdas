@@ -44,7 +44,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             const binaryData: Buffer = Buffer.from(content, 'base64');
             const [name, repository, version] = getZipData(binaryData) || ['', '', ''];
 
-            if (name === '' && repository === '' && version === '') {
+            if (name === '' || version === '') {
                 return {
                     statusCode: 400,
                     body: JSON.stringify({
@@ -66,7 +66,8 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             console.log('using url');
 
             const name = url.split('/').pop();
-            const binaryData = await getZipFromUrl(url);
+            const owner = url.split('/')[3];
+            const binaryData = await getZipFromUrl(owner, name);
             const [, , version] = getZipData(binaryData) || ['', '', ''];
 
             packageData = {
@@ -85,6 +86,23 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             };
         }
 
+        const dynamoDb = new AWS.DynamoDB.DocumentClient();
+        const params_dynamo_query = {
+            TableName: 'registry',
+            Key: {
+                id: packageData.name.toLowerCase(),
+            },
+        };
+        const data = await dynamoDb.get(params_dynamo_query).promise();
+        if (data.Item !== undefined && data.Item !== null) {
+            return {
+                statusCode: 409,
+                body: JSON.stringify({
+                    message: 'Package already exists',
+                }),
+            };
+        }
+
         const lambda = new AWS.Lambda();
         const lambda_params = {
             FunctionName: 'RateFunction-RateFunction-tYak9soW0m0J',
@@ -99,6 +117,8 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             .promise();
         console.log('scores', JSON.parse(score.Payload as string).body.NET_SCORE);
         packageData.ratings = JSON.parse(score.Payload as string).body;
+
+        // TODO: disquality for rating
 
         const s3 = new AWS.S3();
         const params = {
@@ -139,7 +159,14 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         return {
             statusCode: 200,
             body: JSON.stringify({
-                input,
+                meteadata: {
+                    Name: packageData.name,
+                    Version: packageData.version,
+                    ID: packageData.name.toLowerCase(),
+                },
+                data: {
+                    Content: packageData.binaryData.toString('base64'),
+                },
             }),
         };
     } catch (err) {
@@ -147,7 +174,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         return {
             statusCode: 500,
             body: JSON.stringify({
-                message: 'some error happened',
+                message: 'error',
             }),
         };
     }
