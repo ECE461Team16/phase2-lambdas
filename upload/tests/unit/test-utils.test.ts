@@ -21,7 +21,11 @@ describe('test getZipData', function () {
 describe('test getZipFromUrl', function () {
     it('should return valid data if url is valid', async () => {
         const owner = 'bendrucker';
-        const name = 'smallest';
-        const binaryData = await getZipFromUrl(owner, name);
+        const ghname = 'smallest';
+        const binaryData = await getZipFromUrl(owner, ghname);
+        const [name, repository, version] = getZipData(binaryData) || ['', '', ''];
+        expect(name).toBe('smallest');
+        expect(repository).toBe('bendrucker/smallest');
+        expect(version).toBe('1.0.1');
     });
 });
