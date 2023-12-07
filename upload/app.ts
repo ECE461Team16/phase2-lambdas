@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getZipData, getZipFromUrl } from './utils';
+import { getZipData, getZipFromUrl, fixGhUrl } from './utils';
 import { Package } from './models';
 import AWS from 'aws-sdk';
 
@@ -25,7 +25,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             return {
                 statusCode: 400,
                 body: JSON.stringify({
-                    message: 'Content or URL is required',
+                    message: 'Invalid request: Content or URL is required',
                 }),
             };
         }
@@ -48,7 +48,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 return {
                     statusCode: 400,
                     body: JSON.stringify({
-                        message: 'Malformed zip file',
+                        message: 'Invalid request: Malformed zip file',
                     }),
                 };
             }
@@ -60,8 +60,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 binaryData,
                 ratings: '',
             };
-
-            console.log('packageData', packageData);
         } else if (url) {
             console.log('using url');
 
@@ -81,10 +79,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             return {
                 statusCode: 400,
                 body: JSON.stringify({
-                    message: 'Malformed request',
+                    message: 'Invalid request: Malformed request',
                 }),
             };
         }
+        console.log('packageData', packageData);
 
         const dynamoDb = new AWS.DynamoDB.DocumentClient();
         const params_dynamo_query = {
@@ -108,7 +107,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             FunctionName: 'RateFunction-RateFunction-tYak9soW0m0J',
             InvocationType: 'RequestResponse',
             // LogType: 'Tail',
-            Payload: JSON.stringify({ URL: packageData.repository }, null, 2),
+            Payload: JSON.stringify({ URL: fixGhUrl(url) }, null, 2),
         };
         const score = await lambda
             .invoke(lambda_params, function (err: Error, data: any) {
@@ -123,7 +122,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         const s3 = new AWS.S3();
         const params = {
             Bucket: 'ingested-package-storage',
-            Key: `${packageData.name}.zip`,
+            Key: `${packageData.name.toLowerCase()}.zip`,
             Body: packageData.binaryData,
         };
         await s3
@@ -157,7 +156,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             .promise();
 
         return {
-            statusCode: 200,
+            statusCode: 201,
             body: JSON.stringify({
                 meteadata: {
                     Name: packageData.name,

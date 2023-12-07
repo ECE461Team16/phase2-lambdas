@@ -1,4 +1,5 @@
 import AdmZip from 'adm-zip';
+import { OutgoingHttpHeaders } from 'http2';
 import * as https from 'https';
 
 export function getZipData(binaryData: Buffer): [string, string, string] | null {
@@ -31,6 +32,8 @@ export function getZipData(binaryData: Buffer): [string, string, string] | null 
         });
 
         name = name.replace('/', '');
+        version = version.replace('v', '');
+        console.log('version', version);
         return [name, repository, version];
     } else {
         console.log('no zip file found');
@@ -38,25 +41,48 @@ export function getZipData(binaryData: Buffer): [string, string, string] | null 
     }
 }
 
+export function fixGhUrl(url: string): string {
+    if (!url.includes('https://github.com')) {
+        if (url.includes('github.com')) {
+            return `https://${url}`;
+        } else {
+            return `https://github.com/${url}`;
+        }
+    } else {
+        return url;
+    }
+}
+
 // broken, need a reliable source to find zips of the packages
 export function getZipFromUrl(owner: string, name: string): Promise<Buffer> {
+    const headersDict = {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'request',
+    };
+
+    const requestOptions = {
+        headers: headersDict as OutgoingHttpHeaders,
+    };
+
+    const url =
+        fixGhUrl(`${owner}/${name}`).replace('https://github.com', 'https://codeload.github.com') +
+        '/legacy.zip/refs/heads/master';
+
     return new Promise<Buffer>((resolve, reject) => {
         https
-            .get(`https://api.github.com/repos/${owner}/${name}/tarball/master`, (response) => {
-                console.log(`https://api.github.com/repos/${owner}/${name}/tarball/master`);
-                console.log('response', response.statusMessage);
-                // console.log('response', response);
+            .get(url, requestOptions, (response) => {
+                console.log('response', response.statusCode);
+                console.log('url', url);
+
                 if (response.statusCode !== 200) {
-                    reject(new Error('Filed to download file from url'));
+                    reject(new Error('Failed to download file from url'));
                     return;
                 }
 
                 const chunks: Buffer[] = [];
-
                 response.on('data', (chunk: Buffer) => {
                     chunks.push(chunk);
                 });
-
                 response.on('end', () => {
                     const fileBuffer = Buffer.concat(chunks);
                     resolve(fileBuffer);

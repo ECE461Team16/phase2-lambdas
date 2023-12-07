@@ -13,14 +13,15 @@ describe('test getZipData', function () {
         );
         const [name, repository, version] = getZipData(binaryData) || ['', '', ''];
         expect(name).toBe('smallest');
-        expect(repository).toBe('https://github.com/bendrucker/smallest');
+        expect(repository).toBe('bendrucker/smallest');
         expect(version).toBe('1.0.1');
     });
 });
 
 describe('test getZipFromUrl', function () {
     it('should return valid data if url is valid', async () => {
-        const url = 'https://github.com/bendrucker/smallest';
-        const binaryData = await getZipFromUrl(url);
+        const owner = 'bendrucker';
+        const name = 'smallest';
+        const binaryData = await getZipFromUrl(owner, name);
     });
 });
