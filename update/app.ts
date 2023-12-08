@@ -1,89 +1,114 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDB } from 'aws-sdk';
 import AWS from 'aws-sdk';
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
-const TableName = "team17-registry"
+const TableName = 'registry';
 
 //TODO: Update score, Update S3 bucket
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const metadata = JSON.parse(JSON.stringify(event)).metadata;
-  const data = JSON.parse(JSON.stringify(event)).data;
+    console.log(event);
+    const metadata = JSON.parse(event.body)?.metadata;
+    const data = JSON.parse(event.body)?.data;
+    const id = event.pathParameters?.id;
+    console.log(metadata);
+    console.log(data);
+    console.log('id: ', id);
 
-  const getCommand = new GetCommand({
-    TableName: TableName,
-    Key: {
-      "ID": metadata.ID,
-    },
-  });
+    if (!id) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: 'There is missing field(s) in the PackageID/AuthenticationToken or it is formed improperly, or the AuthenticationToken is invalid.',
+            }),
+        };
+    }
 
-  
-  try {
-    const result = await docClient.send(getCommand);
-    // console.log(result.Item);
-    if (result.Item) {
-      // Update the item
-      let url = {"URL": data.URL};    
-      const Score = await calculateScore(url);  // Update Score in DynamoDB
-      // console.log(Score.Score);
-      
-      const updateCommand = new UpdateCommand({
+    const getCommand = new GetCommand({
         TableName: TableName,
         Key: {
-          "ID": metadata.ID,
+            id: metadata.ID,
         },
-        UpdateExpression: "set Version = :Version, Content = :Content, Score = :Score",
-        ExpressionAttributeValues: {
-          ':Version': metadata.Version,
-          ':Content': data.Content,
-          ':Score': Score.Score,
-        },
-      });
+    });
 
-      await docClient.send(updateCommand);  // Update Version and Content in DynamoDB
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Version is updated' }),
-      };
-    } else {
-      console.log('Package does not exist');
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Package does not exist' }),
-      };
+    try {
+        const result = await docClient.send(getCommand);
+        // console.log(result.Item);
+        if (result.Item) {
+            // Update the item
+            let url = { URL: data.URL };
+            const Score = await calculateScore(url); // Update Score in DynamoDB
+            console.log(Score);
+
+            const binaryData: Buffer = Buffer.from(data.Content, 'base64');
+            const s3 = new AWS.S3();
+            const params = {
+                Bucket: 'ingested-package-storage',
+                Key: `${metadata.name}.zip`,
+                Body: binaryData,
+            };
+            await s3
+                .upload(params, (err: Error, data: any) => {
+                    console.log(err, data);
+                })
+                .promise();
+
+            const updateCommand = new UpdateCommand({
+                TableName: TableName,
+                Key: {
+                    id: metadata.ID,
+                },
+                UpdateExpression: 'set version = :version, ratings = :ratings',
+                ExpressionAttributeValues: {
+                    ':version': metadata.Version,
+                    ':ratings': JSON.stringify(Score.Score),
+                },
+            });
+
+            await docClient.send(updateCommand); // Update Version and Content in DynamoDB
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ message: 'Version is updated' }),
+            };
+        } else {
+            console.log('Package does not exist');
+            return {
+                statusCode: 404,
+                body: JSON.stringify({ error: 'Package does not exist' }),
+            };
+        }
+    } catch (error) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' }),
+        };
     }
-  } catch (error) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'There is missing field(s) in the PackageID/AuthenticationToken or it is formed improperly, or the AuthenticationToken is invalid.' }),
-    };
-  }
-}
+};
 
 async function calculateScore(url: any): Promise<{ Score: any }> {
-  const lambda = new AWS.Lambda();
+    const lambda = new AWS.Lambda();
     const params = {
-    FunctionName: 'RateFunction-RateFunction-tYak9soW0m0J',
-    InvocationType: 'RequestResponse',
-    // LogType: 'Tail',
-    Payload: JSON.stringify(url, null, 2)
+        FunctionName: 'RateFunction-RateFunction-tYak9soW0m0J',
+        InvocationType: 'RequestResponse',
+        // LogType: 'Tail',
+        Payload: JSON.stringify(url, null, 2),
     };
-    
-  try {
-    const response = await lambda.invoke(params).promise();
-    // console.log('response:', response);
-    if (response.StatusCode !== 200) {
-      console.log('Error in lambda invoke', response);
-      return { Score: 0 };
+
+    try {
+        const response = await lambda.invoke(params).promise();
+        // console.log('response:', response);
+        if (response.StatusCode !== 200) {
+            console.log('Error in lambda invoke', response);
+            return { Score: 0 };
+        }
+        // console.log('scores', JSON.parse(response.Payload as string).body.NET_SCORE);
+        const score = JSON.parse(response.Payload as string).body;
+        const { URL, ...scores } = score;
+        return { Score: scores };
+    } catch (error) {
+        console.error(error);
+        return { Score: 0 };
     }
-    const body = JSON.parse(response.Payload).body;
-    const {URL, ...score} = body;
-    return { Score: score };
-  } catch (error) {
-    console.error(error)
-    return { Score: 0 };
-  }
 }

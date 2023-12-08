@@ -1,8 +1,8 @@
 {
     "metadata": {
-      "Name": "string",
+      "Name": "smallest",
       "Version": "1.0.0",
-      "ID": "1"
+      "ID": "smallest"
     },
     "data": {
       "Content": "changedstring",

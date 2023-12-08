@@ -42,6 +42,7 @@ export const lambdaHandler = async (event:any): Promise<APIGatewayProxyResult> =
 
   const parsedPayload = JSON.parse(response.Payload?.toString() || '{}');
   const responseBody = parsedPayload.body ? JSON.parse(parsedPayload.body) : {};
+  console.log('responseBody', responseBody);
 
   return {
     statusCode: 200,
