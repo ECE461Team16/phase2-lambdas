@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getZipData, getZipFromUrl, fixGhUrl } from './utils';
+import { getZipData, getZipFromUrl, isJSON } from './utils';
 import { Package } from './models';
 import AWS from 'aws-sdk';
 
@@ -17,9 +17,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     try {
         const content = event.Content;
         const url = event.URL;
-
-        console.log('content', content);
-        console.log('URL', url);
 
         if (!content && !url) {
             return {
@@ -44,15 +41,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             const binaryData: Buffer = Buffer.from(content, 'base64');
             const [name, repository, version] = getZipData(binaryData) || ['', '', ''];
 
-            if (name === '' || version === '') {
-                return {
-                    statusCode: 400,
-                    body: JSON.stringify({
-                        message: 'Invalid request: Malformed zip file',
-                    }),
-                };
-            }
-
             packageData = {
                 name,
                 version,
@@ -62,9 +50,16 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             };
         } else if (url) {
             console.log('using url');
-
-            const name = url.split('/').pop();
-            const owner = url.split('/')[3];
+            let owner;
+            let name;
+            if (url.endsWith('/')) {
+                owner = url.slice(0, -1).split('/')[3];
+                name = url.slice(0, -1).split('/').pop();
+            } else {
+                owner = url.split('/')[3];
+                name = url.split('/').pop();
+            }
+            console.log('url', url);
             const binaryData = await getZipFromUrl(owner, name);
             const [, , version] = getZipData(binaryData) || ['', '', ''];
 
@@ -84,6 +79,15 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             };
         }
         console.log('packageData', packageData);
+
+        if (packageData.name === '' || packageData.version === '' || packageData.repository === '') {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    message: 'Invalid request: Package does not contain necessary information',
+                }),
+            };
+        }
 
         const dynamoDb = new AWS.DynamoDB.DocumentClient();
         const params_dynamo_query = {
@@ -106,8 +110,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         const lambda_params = {
             FunctionName: 'RateFunction-RateFunction-tYak9soW0m0J',
             InvocationType: 'RequestResponse',
-            // LogType: 'Tail',
-            Payload: JSON.stringify({ URL: fixGhUrl(url) }, null, 2),
+            Payload: JSON.stringify({ URL: packageData.repository }, null, 2),
         };
         const score = await lambda
             .invoke(lambda_params, function (err: Error, data: any) {

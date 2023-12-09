@@ -1,6 +1,6 @@
 import AdmZip from 'adm-zip';
 import { OutgoingHttpHeaders } from 'http2';
-import * as https from 'https';
+import { https } from 'follow-redirects';
 
 export function getZipData(binaryData: Buffer): [string, string, string] | null {
     let zipEntries;
@@ -26,30 +26,27 @@ export function getZipData(binaryData: Buffer): [string, string, string] | null 
             if (zipEntry.entryName === `${zip_name}/package.json`) {
                 const data = JSON.parse(zipEntry.getData().toString('utf8'));
                 name = data.name;
-                repository = data.repository as string;
+                repository = data.repository; // TODO: resolve different repository formats to the github url
                 version = data.version;
             }
         });
 
-        name = name.replace('/', '');
-        version = version.replace('v', '');
-        console.log('version', version);
+        console.log(repository);
+        if (name === undefined || version === undefined || repository === undefined) {
+            name = '';
+            version = '';
+            repository = '';
+        } else {
+            name = name.replace('/', '');
+            version = version.replace('v', '');
+            repository =
+                typeof repository === 'object' ? (repository = (repository as { url: string }).url) : repository;
+            repository = repository.toString().replace('git+', '').replace('.git', '').replace('git://', 'https://');
+        }
         return [name, repository, version];
     } else {
         console.log('no zip file found');
         return null;
-    }
-}
-
-export function fixGhUrl(url: string): string {
-    if (!url.includes('https://github.com')) {
-        if (url.includes('github.com')) {
-            return `https://${url}`;
-        } else {
-            return `https://github.com/${url}`;
-        }
-    } else {
-        return url;
     }
 }
 
@@ -64,9 +61,7 @@ export function getZipFromUrl(owner: string, name: string): Promise<Buffer> {
         headers: headersDict as OutgoingHttpHeaders,
     };
 
-    const url =
-        fixGhUrl(`${owner}/${name}`).replace('https://github.com', 'https://codeload.github.com') +
-        '/legacy.zip/refs/heads/master';
+    const url = `https://api.github.com/repos/${owner}/${name}/zipball/HEAD`;
 
     return new Promise<Buffer>((resolve, reject) => {
         https
@@ -92,4 +87,13 @@ export function getZipFromUrl(owner: string, name: string): Promise<Buffer> {
                 reject(error);
             });
     });
+}
+
+export function isJSON(str: string) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
 }

@@ -13,7 +13,7 @@ import AWS from 'aws-sdk';
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const id = event.id;
+        const id = event.pathParameters?.id;
 
         if (!id) {
             return {
