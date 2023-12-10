@@ -2,6 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import AWS from 'aws-sdk';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { escape } from 'lodash';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -9,13 +10,30 @@ const TableName = 'registry';
 
 //TODO: Update score, Update S3 bucket
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    console.log(event);
-    const metadata = JSON.parse(event.body)?.metadata;
-    const data = JSON.parse(event.body)?.data;
-    const id = event.pathParameters?.id;
+    console.log(event); 
+
+    //input sanitation for metadata, data, and id
+    let user_input_metadata = JSON.parse(event.body)?.metadata;
+    user_input_metadata = escape(user_input_metadata);
+    const doc = new DOMParser().parseFromString(user_input_metadata, 'text/html');
+    const sanitized_input_metadata = doc.documentElement.textContent || '';
+    const metadata = sanitized_input_metadata;
     console.log(metadata);
+
+    let user_input_data = JSON.parse(event.body)?.data;
+    user_input_data = escape(user_input_data);
+    const doc_data = new DOMParser().parseFromString(user_input_data, 'text/html');
+    const sanitized_input_data = doc_data.documentElement.textContent || '';
+    const data = sanitized_input_data;
     console.log(data);
+
+    let user_input_id = event.pathParameters?.id;
+    user_input_id = escape(user_input_id);
+    const doc_id = new DOMParser().parseFromString(user_input_id, 'text/html');
+    const sanitized_input_id = doc_id.documentElement.textContent || '';
+    const id = sanitized_input_id;
     console.log('id: ', id);
+    //end of input sanitation
 
     if (!id) {
         return {
