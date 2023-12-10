@@ -9,10 +9,10 @@ Globals:
     Timeout: 29
 
 Resources:
-  packagesFunction:
+  RegexFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: packages
+      CodeUri: package/byRegEx
       Handler: app.lambdaHandler
       Runtime: nodejs18.x
       Architectures:
@@ -32,6 +32,14 @@ Resources:
         EntryPoints:
         - app.ts
 
+  # DynamoDBTable:
+  #   Type: AWS::Serverless::SimpleTable
+  #   Properties:
+  #     PrimaryKey:
+  #       Name: ID
+  #       Type: String
+  #     TableName: registry
+
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:
@@ -46,6 +54,7 @@ Resources:
         Ref: ApplicationResourceGroup
       AutoConfigurationEnabled: 'true'
 
+# TODO
 # Outputs:
 #   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
 #   # Find out more about other implicit resources you can reference within SAM
