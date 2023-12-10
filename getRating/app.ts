@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { escape } from 'lodash';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -8,8 +9,12 @@ const TableName = "registry"
 
 //TODO: Update score, Update S3 bucket
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    console.log(event);
-    const id = event.pathParameters?.id;
+    console.log(event); 
+    let user_input = event.pathParameters?.id;
+    user_input = escape(user_input);
+    const doc = new DOMParser().parseFromString(user_input, 'text/html');
+    const sanitized_input = doc.documentElement.textContent || '';
+    const id = sanitized_input;
     console.log(id);
 
     if (!id) {
