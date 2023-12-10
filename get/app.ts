@@ -1,5 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import AWS from 'aws-sdk';
+import html
 
 /**
  *
@@ -13,7 +14,11 @@ import AWS from 'aws-sdk';
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const id = event.id;
+        
+        //sanitize input
+        const user_input = event.id;
+        const sanitized_input = html.escape(user_input)
+        const id = sanitized_input;
 
         if (!id) {
             return {
