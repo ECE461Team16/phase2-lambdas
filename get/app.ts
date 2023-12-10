@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import AWS from 'aws-sdk';
-import html
+import { escape } from 'lodash';
 
 /**
  *
@@ -14,10 +14,11 @@ import html
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        
         //sanitize input
-        const user_input = event.id;
-        const sanitized_input = html.escape(user_input)
+        let user_input = event.id;
+        user_input = escape(user_input);
+        const doc = new DOMParser().parseFromString(user_input, 'text/html');
+        const sanitized_input = doc.documentElement.textContent || '';
         const id = sanitized_input;
 
         if (!id) {
