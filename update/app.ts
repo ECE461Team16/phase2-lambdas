@@ -14,25 +14,35 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
     //input sanitation for metadata, data, and id
     let user_input_metadata = JSON.parse(event.body)?.metadata;
-    user_input_metadata = escape(user_input_metadata);
-    const doc = new DOMParser().parseFromString(user_input_metadata, 'text/html');
-    const sanitized_input_metadata = doc.documentElement.textContent || '';
-    const metadata = sanitized_input_metadata;
-    console.log(metadata);
+  let sanitized_input_metadata = escape(user_input_metadata);
+  sanitized_input_metadata = sanitized_input_metadata.replace(
+    /[^a-zA-Z0-9_.\/-]/g,
+    "_"
+  );
+  sanitized_input_metadata = sanitized_input_metadata.replace(/_+/g, "_");
 
-    let user_input_data = JSON.parse(event.body)?.data;
-    user_input_data = escape(user_input_data);
-    const doc_data = new DOMParser().parseFromString(user_input_data, 'text/html');
-    const sanitized_input_data = doc_data.documentElement.textContent || '';
-    const data = sanitized_input_data;
-    console.log(data);
+  const metadata = sanitized_input_metadata;
+  console.log(metadata);
 
-    let user_input_id = event.pathParameters?.id;
-    user_input_id = escape(user_input_id);
-    const doc_id = new DOMParser().parseFromString(user_input_id, 'text/html');
-    const sanitized_input_id = doc_id.documentElement.textContent || '';
-    const id = sanitized_input_id;
-    console.log('id: ', id);
+  let user_input_data = JSON.parse(event.body)?.data;
+  let sanitized_input_data = escape(user_input_data);
+  sanitized_input_metadata = sanitized_input_metadata.replace(
+    /[^a-zA-Z0-9_.\/-]/g,
+    "_"
+  );
+  sanitized_input_metadata = sanitized_input_metadata.replace(/_+/g, "_");
+
+  const data = sanitized_input_data;
+  console.log(data);
+
+  let user_input_id = event.pathParameters?.id;
+  user_input_id = escape(user_input_id);
+  let sanitized_input_id = escape(user_input_id);
+  sanitized_input_id = user_input_id.replace(/[^a-zA-Z0-9_.\/-]/g, "_");
+  sanitized_input_id = sanitized_input_id.replace(/_+/g, "_");
+
+  const id = sanitized_input_id;
+  console.log("id: ", id);
     //end of input sanitation
 
     if (!id) {
