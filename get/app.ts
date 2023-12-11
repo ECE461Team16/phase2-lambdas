@@ -16,9 +16,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     try {
         //sanitize input
         let user_input = event.id;
-        user_input = escape(user_input);
-        const doc = new DOMParser().parseFromString(user_input, 'text/html');
-        const sanitized_input = doc.documentElement.textContent || '';
+        let sanitized_input = escape(user_input);
+        sanitized_input = sanitized_input.replace(/[^a-zA-Z0-9_.\/-]/g, '');
+        sanitized_input = sanitized_input.replace(/_+/g, '_');
+
         const id = sanitized_input;
 
         if (!id) {
