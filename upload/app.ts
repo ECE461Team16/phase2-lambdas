@@ -15,8 +15,36 @@ import AWS from 'aws-sdk';
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const content = event.Content;
-        const url = event.URL;
+        //input sanitization
+        let sanitized_content = event.Content;
+        let sanitized_url = event.URL;
+
+        const urlRegex = /(github\.com|npmjs\.com)\/.+/;
+        const MAX_URL_LENGTH = 2048;
+
+        sanitized_url = sanitized_url?.trim();
+
+        if (sanitized_url && sanitized_url.length > MAX_URL_LENGTH) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    message: 'Invalid request: URL is too long',
+                }),
+            };
+        }
+        if (sanitized_url && !urlRegex.test(sanitized_url)) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    message: 'Invalid request: URL is invalid',
+                }),
+            };
+        }
+
+        const content = sanitized_content;
+        const url = sanitized_url;
+        
+        // End of input sanitization
 
         if (!content && !url) {
             return {
