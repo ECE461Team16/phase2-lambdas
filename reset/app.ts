@@ -26,21 +26,20 @@ async function deleteItemsFromDB(items: any) {
 
   console.log("===== Deleting from DB =====\n{", items, "}\n")
 
-  const deleteRequests = items.map((item: any) => ({
-    DeleteRequest: {
-      Key: {
-        item
-      },
-    },
-  }))
+  var deleteRequests: { DeleteRequest: { Key: { [id: string]: any } } }[] = [];
+  
+  items.forEach((item: any) => {
+    deleteRequests.push({ DeleteRequest: { Key: { id: item.Key } } });
+  })
 
-  console.log("Delete Requests {", deleteRequests, "} from DynamoDB\n")
+  console.log("Delete Requests {", deleteRequests, "} from DynamoDB\n");
 
   // Create the batch write parameters
   const params = {
     RequestItems: {
-      'registry': deleteRequests,
-    },
+      [TABLENAME]:
+        deleteRequests
+    }
   }
 
   console.log("Params {", params, "} from DynamoDB\n")
@@ -61,22 +60,12 @@ async function deleteItemsFromS3(items: any) {
     Bucket: BUCKET,
     Delete: {
       Objects: items.map((item: any) => { // VERIFY THIS IS CORRECT
-        console.log("Item: ", item, "\nid: ", item.id, "\n")
-        return { Key: item.id }
+        item = item.Key + ".zip"
+        console.log("Item {", item, "} from S3\n")
+        return { Key: item }
       })
     }
   })
-
-  console.log("Delete Command {", deleteCommand, "} from S3 bucket\n")
-
-  const deleteCommand2 = new DeleteObjectsCommand({
-    Bucket: BUCKET,
-    Delete: {
-      Objects: [{ Key: items[0].id }]
-    }
-  })
-  console.log("Here is the object:\n", items[0].id)
-  console.log("Delete Command 2 {", deleteCommand2, "} from S3 bucket\n")
 
   try {
     const Deleted = await S3client.send(deleteCommand);
