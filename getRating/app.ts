@@ -11,9 +11,12 @@ const TableName = "registry"
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log(event); 
     let user_input = event.pathParameters?.id;
-    user_input = escape(user_input);
-    const doc = new DOMParser().parseFromString(user_input, 'text/html');
-    const sanitized_input = doc.documentElement.textContent || '';
+    let sanitized_input = escape(user_input);
+    sanitized_input = sanitized_input.replace(
+      /[^a-zA-Z0-9_.\/-]/g,
+      "_"
+    );
+    sanitized_input = sanitized_input.replace(/_+/g, "_");
     const id = sanitized_input;
     console.log(id);
 
