@@ -54,11 +54,18 @@ const TYPES = {
 
 const DBclient = new DynamoDBClient()
 const DBdocclient = DynamoDBDocumentClient.from(DBclient)
-const TABLENAME = "package-registry"
+const TABLENAME = "registry"
 
 function convertVersionToInt(version: string): number {
     const versionArray = version.split('.')
     return parseInt(versionArray.join(''))
+}
+
+// Digit is 1, when version is 1.2.3, it will return 1.3.0 (Tilde)
+// Digit is 2, when version is 1.2.3, it will return 2.0.0 (Carat)
+function roundtoNearestVersion(version: number, digit: number) {
+    var place = 10 ** digit
+    return Math.ceil(version / place) * place
 }
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -74,55 +81,118 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         }),
       }
     }
+    
+    var version = body.Version
+    var name = body.Name
+    console.log("Version: ", version, " Name: ", name)
 
     var type = TYPES.EXACT
-
-    if (body.includes("-")) {
-        type = TYPES.BOUNDED
-    } else if (body.includes("^")) {
-        type = TYPES.CARAT
-    } else if (body.includes("~")) {
-        type = TYPES.TILDE
-    }
+    var requestVersion = 0
+    var boundedVersion = 0
+    var match = null
     
-    // MUST LOOP TO GET ALL INSTANCES
-    
-    const scanCommand = new ScanCommand({
-      TableName: TABLENAME,
-      ProjectionExpression: "id, version",
-    })
-    
-    var Scanned = await DBdocclient.send(scanCommand)
-    console.log("Scanned: ", Scanned)
-    
-    var results = Scanned.Items
-    console.log("Results: ", results)
-
-    if (results == undefined) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          message: 'some error happened',
-        }),
+    if (version.includes("-")) {
+      type = TYPES.BOUNDED
+      const regex = /^\((\d+\.\d+\.\d+)-(\d+\.\d+\.\d+)\)/
+      match = regex.exec(version)
+      if (match) {
+        requestVersion = convertVersionToInt(match[1])
+        boundedVersion = convertVersionToInt(match[2])
+      }
+    } else if (version.includes("^")) {
+      type = TYPES.CARAT
+      const regex = /^\((\^\d+\.\d+\.\d+)\)/
+      match = regex.exec(version)
+      if (match) {
+        requestVersion = convertVersionToInt(match[1])
+      }
+    } else if (version.includes("~")) {
+      type = TYPES.TILDE
+      const regex = /^\((~\d+\.\d+\.\d+)\)/
+      match = regex.exec(version)
+      if (match) {
+        requestVersion = convertVersionToInt(match[1])
+      }
+    } else {      
+      var regex = /\((\d+\.\d+\.\d+)\)/
+      match = regex.exec(version)
+      if (match) {
+        requestVersion = convertVersionToInt(match[1])
       }
     }
     
-    // for (var i = 0; i < results.length; i++) {
-    //     var version = results[i]["Version"]
-    //     var matches = version.match(/\((\d+\.\d+\.\d+)\)/)
-    //     while ((matches = )
-    // }
+    console.log("Request version: ", requestVersion)
+    console.log("Bounded version: ", boundedVersion)
+    console.log("Type: ", type)
 
+    if (!match) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          message: 'Invalid version',
+        }),
+      }
+    }
 
+    console.log("Match: ", match)
 
+    const scanCommand = new ScanCommand({
+      TableName: TABLENAME,
+      ProjectionExpression: "id, version",
+      FilterExpression: "id = :id",
+      ExpressionAttributeValues: {
+        ":id": name,
+      }
+    })
+    
+    var result = await DBdocclient.send(scanCommand)
+    console.log("Scanned: ", result)
 
+    var items = result.Items
+    console.log("Items: ", items)
+
+    if (result.Count == 0) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          message: 'No packages found',
+        }),
+      }
+    }
+
+    var return_packages = []
+
+    for (var pkg in items) {
+      var pkgVer = convertVersionToInt(pkg.version)
+      switch(type) {
+        case TYPES.BOUNDED:
+          if (pkgVer >= requestVersion && pkgVer < boundedVersion) {
+            return_packages.push(pkg)
+          }
+          break;
+        case TYPES.CARAT:
+          if (pkgVer >= requestVersion && pkgVer < roundtoNearestVersion(requestVersion, 2)) {
+            return_packages.push(pkg)
+          }
+          break;
+        case TYPES.TILDE:
+          if (pkgVer >= requestVersion && pkgVer < roundtoNearestVersion(requestVersion, 1)) {
+            return_packages.push(pkg)
+          }  
+          break;
+        default: // EXACT
+          if (pkgVer == requestVersion) {
+            return_packages.push(pkg)
+          }
+      }
+    }
+
+    console.log("Return packages: ", return_packages)
 
     try {
         return {
             statusCode: 200,
-            body: JSON.stringify({
-                message: 'hello world',
-            }),
+            body: JSON.stringify(return_packages),
         };
     } catch (err) {
         console.log(err);
