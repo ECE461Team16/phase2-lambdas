@@ -36,16 +36,25 @@ export const lambdaHandler = async (event:any): Promise<APIGatewayProxyResult> =
     // console.log('Error in lambda invoke', response);
     return {
       statusCode: 500,
-      body: JSON.parse(response.Payload?.toString() || '{}')
+      body: JSON.parse(response.Payload?.toString() || '{}'),
+      headers: {
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+      },
     };
   }
 
   const parsedPayload = JSON.parse(response.Payload?.toString() || '{}');
   const responseBody = parsedPayload.body ? JSON.parse(parsedPayload.body) : {};
-  console.log('responseBody', responseBody);
 
   return {
     statusCode: 200,
-    body: responseBody
+    body: responseBody,
+    headers: {
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+    },
   };
 }
