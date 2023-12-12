@@ -58,4 +58,4 @@ Resources:
     Properties:
       ResourceGroupName:
         Ref: ApplicationResourceGroup
-      AutoConfigurationEnabled: "true"
+      AutoConfigurationEnabled: "true" 
