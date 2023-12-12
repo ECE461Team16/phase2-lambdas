@@ -24,12 +24,8 @@ Resources:
           TABLE_NAME: registry
       Runtime: nodejs18.x
       MemorySize: 1024
-      # Role: !GetAtt InvokeOtherLambda.Arn
       Architectures:
       - x86_64
-      # Events: TODO
-      #   HelloWorld:
-      #     Type: Api # More info about API Event Source:
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:

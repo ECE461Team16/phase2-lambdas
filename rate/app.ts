@@ -21,40 +21,39 @@ AWS.config.update({ region: 'us-east-1' });
   
   *
 */
-export const lambdaHandler = async (event:any): Promise<APIGatewayProxyResult> => {
-  
-  const lambda = new AWS.Lambda();
-  const params = {
-    FunctionName: 'phase1code',
-    InvocationType: 'RequestResponse',
-    // LogType: 'Tail',
-    Payload: JSON.stringify(event, null, 2) 
-  };
-  const response = await lambda.invoke(params).promise();
-
-  if (response.StatusCode !== 200) {
-    // console.log('Error in lambda invoke', response);
-    return {
-      statusCode: 500,
-      body: JSON.parse(response.Payload?.toString() || '{}'),
-      headers: {
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-      },
+export const lambdaHandler = async (event: any): Promise<APIGatewayProxyResult> => {
+    const lambda = new AWS.Lambda();
+    const params = {
+        FunctionName: 'phase1code',
+        InvocationType: 'RequestResponse',
+        // LogType: 'Tail',
+        Payload: JSON.stringify(event, null, 2),
     };
-  }
+    const response = await lambda.invoke(params).promise();
 
-  const parsedPayload = JSON.parse(response.Payload?.toString() || '{}');
-  const responseBody = parsedPayload.body ? JSON.parse(parsedPayload.body) : {};
+    if (response.StatusCode !== 200) {
+        // console.log('Error in lambda invoke', response);
+        return {
+            statusCode: 500,
+            body: JSON.parse(response.Payload?.toString() || '{}'),
+            headers: {
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
+        };
+    }
 
-  return {
-    statusCode: 200,
-    body: responseBody,
-    headers: {
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-    },
-  };
-}
+    const parsedPayload = JSON.parse(response.Payload?.toString() || '{}');
+    const responseBody = parsedPayload.body ? JSON.parse(parsedPayload.body) : {};
+
+    return {
+        statusCode: 200,
+        body: responseBody,
+        headers: {
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+        },
+    };
+};
