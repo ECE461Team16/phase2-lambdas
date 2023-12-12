@@ -57,6 +57,8 @@ const DBdocclient = DynamoDBDocumentClient.from(DBclient)
 const TABLENAME = "registry"
 
 function convertVersionToInt(version: string): number {
+    console.log("Converting version: ", version)
+    version = version.replace(/^[\^~\-]+/, "");
     const versionArray = version.split('.')
     return parseInt(versionArray.join(''))
 }
@@ -85,6 +87,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     var version = body.Version
     var name = body.Name
     console.log("Version: ", version, " Name: ", name)
+    console.log("Version type: ", typeof version, " Name type: ", typeof name)
 
     var type = TYPES.EXACT
     var requestVersion = 0
@@ -93,31 +96,35 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     
     if (version.includes("-")) {
       type = TYPES.BOUNDED
-      const regex = /^\((\d+\.\d+\.\d+)-(\d+\.\d+\.\d+)\)/
+      const regex = /\((\d+\.\d+\.\d+)-(\d+\.\d+\.\d+)\)/
       match = regex.exec(version)
       if (match) {
         requestVersion = convertVersionToInt(match[1])
         boundedVersion = convertVersionToInt(match[2])
+        console.log("Found bounded")
       }
     } else if (version.includes("^")) {
       type = TYPES.CARAT
-      const regex = /^\((\^\d+\.\d+\.\d+)\)/
+      const regex = /\((\^\d+\.\d+\.\d+)\)/
       match = regex.exec(version)
       if (match) {
         requestVersion = convertVersionToInt(match[1])
+        console.log("Found carat")
       }
     } else if (version.includes("~")) {
       type = TYPES.TILDE
-      const regex = /^\((~\d+\.\d+\.\d+)\)/
+      const regex = /\((\~\d+\.\d+\.\d+)\)/
       match = regex.exec(version)
       if (match) {
         requestVersion = convertVersionToInt(match[1])
+        console.log("Found tilde")
       }
     } else {      
       var regex = /\((\d+\.\d+\.\d+)\)/
       match = regex.exec(version)
       if (match) {
         requestVersion = convertVersionToInt(match[1])
+        console.log("Found exact")
       }
     }
     
@@ -162,7 +169,8 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
     var return_packages = []
 
-    for (var pkg in items) {
+    items.forEach(pkg => {
+      console.log("Package: ", pkg)
       var pkgVer = convertVersionToInt(pkg.version)
       switch(type) {
         case TYPES.BOUNDED:
@@ -185,11 +193,20 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             return_packages.push(pkg)
           }
       }
-    }
+    })
 
     console.log("Return packages: ", return_packages)
 
     try {
+        if (return_packages.length == 0) {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({
+              message: 'No packages matched',
+            }),
+          }
+        }
+
         return {
             statusCode: 200,
             body: JSON.stringify(return_packages),
