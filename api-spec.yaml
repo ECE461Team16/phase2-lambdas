@@ -1,9 +1,20 @@
 ---
 openapi: 3.0.2
 info:
-  title: ECE 461 - Spring 2023 - Project 2
-  version: 2.3.5
-  description: "API for ECE 461/Spring 2023/Project 2: A Trustworthy Module Registry"
+  title: ECE 461 - Fall 2023 - Project Phase 2
+  version: 2.4.1
+  description: |-
+                API for ECE 461/Fall 2023/Project Phase 2: A Trustworthy Module Registry"
+                
+                All endpoints have BASELINE or NON-BASELINE listed. Please read through all descriptions before raising questions. 
+                
+                A package ID is unique identifier for Package and Version. (Key idea -> id is unique for all pacakges).
+                
+                Eg. 
+                
+                    PacakgeName: Alpha, PackageVersion: 1.1.1 -> PackageID: 988645763
+                   
+                    PacakgeName: Alpha, PackageVersion: 1.3.2 -> PackageID: 357898765
   termsOfService: http://swagger.io/terms/
   contact:
     name: Prof. Davis
@@ -65,14 +76,16 @@ paths:
         "413":
           description: Too many packages returned.
       operationId: PackagesList
-      summary: Get the packages from the registry.
-      description: |-
+      summary: Get the packages from the registry. (BASELINE)
+      description: |- 
         Get any packages fitting the query.
         Search for packages satisfying the indicated query.
 
         If you want to enumerate all packages, provide an array with a single PackageQuery whose name is "*".
 
         The response is paginated; the response header includes the offset to use in the next query.
+        
+        In the Request Body below, "Version" has all the possible inputs. The "Version" cannot be a combinaiton fo the all the possibilities. 
     parameters:
     - name: X-Authorization
       description: ""
@@ -84,14 +97,14 @@ paths:
     delete:
       responses:
         "200":
-          description: Registry is reset.
+          description: Registry is reset. 
         "400":
           description: "There is missing field(s) in the AuthenticationToken or it\
             \ is formed improperly, or the AuthenticationToken is invalid."
         "401":
           description: You do not have permission to reset the registry.
       operationId: RegistryReset
-      summary: Reset the registry
+      summary: Reset the registry. (BASELINE)
       description: Reset the registry to a system default state.
     parameters:
     - name: X-Authorization
@@ -156,7 +169,7 @@ paths:
         "404":
           description: Package does not exist.
       operationId: PackageRetrieve
-      summary: Interact with the package with this ID
+      summary: Interact with the package with this ID. (BASELINE)
       description: Return this package.
     put:
       requestBody:
@@ -181,7 +194,7 @@ paths:
         "404":
           description: Package does not exist.
       operationId: PackageUpdate
-      summary: Update this content of the package.
+      summary: Update this content of the package. (BASELINE)
       description: |-
         The name, version, and ID must match.
 
@@ -203,7 +216,8 @@ paths:
         "404":
           description: Package does not exist.
       operationId: PackageDelete
-      summary: Delete this version of the package.
+      summary: Delete this version of the package. (NON-BASELINE)
+      description: Delete only the package that matches "id". (id is a unique identifier for a packge)
     parameters:
     - examples:
         ExampleID:
@@ -288,6 +302,9 @@ paths:
         "424":
           description: Package is not uploaded due to the disqualified rating.
       operationId: PackageCreate
+      summary: Upload or Ingest a new package. (BASELINE)
+      description: |-
+                  Upload or Ingest a new package. Packages that are uploaded may have the same name but a new version. Refer to the description above to see how an id is formed for a pacakge. 
     parameters:
     - name: X-Authorization
       description: ""
@@ -313,6 +330,7 @@ paths:
         "500":
           description: The package rating system choked on at least one of the metrics.
       operationId: PackageRate
+      summary: "Get ratings for this package. (BASELINE)"
     parameters:
     - name: id
       schema:
@@ -367,6 +385,7 @@ paths:
         "501":
           description: This system does not support authentication.
       operationId: CreateAuthToken
+      summary: (NON-BASELINE)
       description: Create an access token.
   /package/byName/{name}:
     get:
@@ -434,6 +453,7 @@ paths:
         "404":
           description: No such package.
       operationId: PackageByNameGet
+      summary: (NON-BASELINE)
       description: Return the history of this package (all versions).
     delete:
       parameters:
@@ -451,7 +471,7 @@ paths:
         "404":
           description: Package does not exist.
       operationId: PackageByNameDelete
-      summary: Delete all versions of this package.
+      summary: Delete all versions of this package. (NON-BASELINE)
     parameters:
     - examples:
         ExampleName:
@@ -506,7 +526,7 @@ paths:
         "404":
           description: No package found under this regex.
       operationId: PackageByRegExGet
-      summary: Get any packages fitting the regular expression.
+      summary: Get any packages fitting the regular expression (BASELINE).
       description: Search for a package using regular expression over package names
         and READMEs. This is similar to search by name.
     parameters:
