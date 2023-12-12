@@ -18,11 +18,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             body: JSON.stringify({
                 error: 'There is missing field(s) in the PackageID/AuthenticationToken or it is formed improperly, or the AuthenticationToken is invalid.',
             }),
-            headers: {
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-            },
         };
     }
 
@@ -53,11 +48,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             return {
                 statusCode: 404,
                 body: JSON.stringify({ error: 'Package does not exist' }),
-                headers: {
-                    'Access-Control-Allow-Headers': 'Content-Type',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-                },
             };
         }
     } catch (error) {
@@ -66,11 +56,6 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             body: JSON.stringify({
                 error: 'The package rating system choked on at least one of the metrics.',
             }),
-            headers: {
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-            },
         };
     }
 };

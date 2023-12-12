@@ -36,11 +36,6 @@ export const lambdaHandler = async (event: any): Promise<APIGatewayProxyResult> 
         return {
             statusCode: 500,
             body: JSON.parse(response.Payload?.toString() || '{}'),
-            headers: {
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-            },
         };
     }
 
