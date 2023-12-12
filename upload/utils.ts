@@ -1,48 +1,88 @@
 import AdmZip from 'adm-zip';
-import * as https from 'https';
+import { OutgoingHttpHeaders } from 'http2';
+import { https } from 'follow-redirects';
 
-export function getZipData(binaryData: Buffer): [string, string, string] | null {
-    const zip = new AdmZip(binaryData);
-    const zipEntries = zip.getEntries();
+export function getZipData(binaryData: Buffer): [string, string, string, string] | null {
+    let zipEntries;
+    let zip;
+    try {
+        zip = new AdmZip(binaryData);
+        zipEntries = zip.getEntries();
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
 
     if (zipEntries.length > 0) {
         let repository = '';
         let name = '';
         let version = '';
+        let readme = '';
+
+        // get zip file name
+        const zip_name = zipEntries[0].entryName.split('/')[0];
+        console.log('zip_name', zip_name);
 
         zipEntries.forEach((zipEntry) => {
-            if (zipEntry.entryName === `smallest-master/package.json`) {
+            if (zipEntry.entryName === `${zip_name}/package.json`) {
                 const data = JSON.parse(zipEntry.getData().toString('utf8'));
                 name = data.name;
-                repository = data.repository;
+                repository = data.repository; // TODO: resolve different repository formats to the github url
                 version = data.version;
+            }
+            if (zipEntry.entryName.toLowerCase() === `${zip_name.toLowerCase()}/readme.md`) {
+                readme = zipEntry.getData().toString('utf8');
             }
         });
 
-        name = name.replace('/', '');
-        repository = 'https://github.com/' + repository;
-        return [name, repository, version];
+        console.log(repository);
+        if (name === undefined || version === undefined || repository === undefined) {
+            name = '';
+            version = '';
+            repository = '';
+        } else {
+            name = name.replace('/', '');
+            version = version.replace('v', '');
+            repository =
+                typeof repository === 'object' ? (repository = (repository as { url: string }).url) : repository;
+            repository = repository.toString().replace('git+', '').replace('.git', '').replace('git://', 'https://');
+        }
+        //        readme = readme.replace(/#+ /g, '').replace(/\n/g, ' ');
+        return [name, repository, version, readme];
     } else {
         console.log('no zip file found');
         return null;
     }
 }
 
-export function getDataFromUrl(url: string): Promise<Buffer> {
+// broken, need a reliable source to find zips of the packages
+export function getZipFromUrl(owner: string, name: string): Promise<Buffer> {
+    const headersDict = {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'request',
+    };
+
+    const requestOptions = {
+        headers: headersDict as OutgoingHttpHeaders,
+    };
+
+    const url = `https://api.github.com/repos/${owner}/${name}/zipball/HEAD`;
+
     return new Promise<Buffer>((resolve, reject) => {
         https
-            .get(url + 'archive/main.zip', (response) => {
+            .get(url, requestOptions, (response) => {
+                console.log('response', response.statusCode);
+                console.log('url', url);
+
                 if (response.statusCode !== 200) {
-                    reject(new Error('Filed to download file from url'));
+                    reject(new Error('Failed to download file from url'));
                     return;
                 }
 
                 const chunks: Buffer[] = [];
-
                 response.on('data', (chunk: Buffer) => {
                     chunks.push(chunk);
                 });
-
                 response.on('end', () => {
                     const fileBuffer = Buffer.concat(chunks);
                     resolve(fileBuffer);
@@ -52,4 +92,13 @@ export function getDataFromUrl(url: string): Promise<Buffer> {
                 reject(error);
             });
     });
+}
+
+export function isJSON(str: string) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
 }
