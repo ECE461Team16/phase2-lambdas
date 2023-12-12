@@ -52,6 +52,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 }),
             };
         }
+        const readme = data.Item?.readme;
 
         const s3 = new AWS.S3();
         const params = {
@@ -66,11 +67,17 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
         return {
             statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             body: JSON.stringify({
-                meteadata: {
+                metadata: {
                     Name: name,
                     Version: version,
                     ID: id,
+                    Readme: readme,
                 },
                 data: {
                     Content: package_zip.Body.toString('base64'),

@@ -15,8 +15,17 @@ import AWS from 'aws-sdk';
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        const content = event.Content;
-        const url = event.URL;
+        console.log('event', event);
+
+        let content;
+        let url;
+        if (event.body) {
+            content = JSON.parse(event.body).Content;
+            url = JSON.parse(event.body).URL;
+        }
+
+        console.log('content', content);
+        console.log('url', url);
 
         if (!content && !url) {
             return {
@@ -31,6 +40,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             name: '',
             version: '',
             repository: '',
+            readme: '',
             binaryData: Buffer.from(''),
             ratings: '',
         };
@@ -39,12 +49,13 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             console.log('using content string');
 
             const binaryData: Buffer = Buffer.from(content, 'base64');
-            const [name, repository, version] = getZipData(binaryData) || ['', '', ''];
+            const [name, repository, version, readme] = getZipData(binaryData) || ['', '', '', ''];
 
             packageData = {
                 name,
                 version,
                 repository,
+                readme,
                 binaryData,
                 ratings: '',
             };
@@ -61,11 +72,12 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             }
             console.log('url', url);
             const binaryData = await getZipFromUrl(owner, name);
-            const [, , version] = getZipData(binaryData) || ['', '', ''];
+            const [, , version, readme] = getZipData(binaryData) || ['', '', '', ''];
 
             packageData = {
                 name,
                 version,
+                readme,
                 repository: url,
                 binaryData,
                 ratings: '',
@@ -117,8 +129,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 console.log(err, data);
             })
             .promise();
-        console.log('scores', JSON.parse(score.Payload as string).body.NET_SCORE);
-        packageData.ratings = JSON.parse(score.Payload as string).body;
+        const score_withURL = JSON.parse(score.Payload as string).body;
+        const { URL, ...scores } = score_withURL;
+        packageData.ratings = scores;
 
         // TODO: disquality for rating
 
@@ -146,6 +159,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 name: {
                     S: packageData.name,
                 },
+                readme: {
+                    S: packageData.readme,
+                },
                 ratings: {
                     S: JSON.stringify(packageData.ratings),
                 },
@@ -160,6 +176,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
         return {
             statusCode: 201,
+            headers: {
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': '*',
+            },
             body: JSON.stringify({
                 meteadata: {
                     Name: packageData.name,

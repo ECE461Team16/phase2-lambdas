@@ -2,7 +2,7 @@ import AdmZip from 'adm-zip';
 import { OutgoingHttpHeaders } from 'http2';
 import { https } from 'follow-redirects';
 
-export function getZipData(binaryData: Buffer): [string, string, string] | null {
+export function getZipData(binaryData: Buffer): [string, string, string, string] | null {
     let zipEntries;
     let zip;
     try {
@@ -17,6 +17,7 @@ export function getZipData(binaryData: Buffer): [string, string, string] | null 
         let repository = '';
         let name = '';
         let version = '';
+        let readme = '';
 
         // get zip file name
         const zip_name = zipEntries[0].entryName.split('/')[0];
@@ -28,6 +29,9 @@ export function getZipData(binaryData: Buffer): [string, string, string] | null 
                 name = data.name;
                 repository = data.repository; // TODO: resolve different repository formats to the github url
                 version = data.version;
+            }
+            if (zipEntry.entryName.toLowerCase() === `${zip_name.toLowerCase()}/readme.md`) {
+                readme = zipEntry.getData().toString('utf8');
             }
         });
 
@@ -43,7 +47,8 @@ export function getZipData(binaryData: Buffer): [string, string, string] | null 
                 typeof repository === 'object' ? (repository = (repository as { url: string }).url) : repository;
             repository = repository.toString().replace('git+', '').replace('.git', '').replace('git://', 'https://');
         }
-        return [name, repository, version];
+        //        readme = readme.replace(/#+ /g, '').replace(/\n/g, ' ');
+        return [name, repository, version, readme];
     } else {
         console.log('no zip file found');
         return null;
