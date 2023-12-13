@@ -9,7 +9,7 @@ Resources:
   DeleteFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: /package/delete
+      CodeUri: packages\delete
       Handler: app.lambdaHandler
       Runtime: nodejs18.x
       Architectures:
