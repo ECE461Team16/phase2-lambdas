@@ -23,18 +23,18 @@ const S3client = new S3Client({});
 const BUCKET = "ingested-package-storage"
 
 async function deleteItemsFromDB(items: any) {
+  console.log("===== Deleting from DB =====\n", items)
 
-  console.log("===== Deleting from DB =====\n{", items, "}\n")
-
+  // create delete requests for batchwrite
   var deleteRequests: { DeleteRequest: { Key: { [id: string]: any } } }[] = [];
   
   items.forEach((item: any) => {
     deleteRequests.push({ DeleteRequest: { Key: { id: item.Key } } });
   })
 
-  console.log("Delete Requests {", deleteRequests, "} from DynamoDB\n");
+  console.log("Delete Requests: \n", deleteRequests);
 
-  // Create the batch write parameters
+  // create the batch write parameters
   const params = {
     RequestItems: {
       [TABLENAME]:
@@ -42,24 +42,27 @@ async function deleteItemsFromDB(items: any) {
     }
   }
 
-  console.log("Params {", params, "} from DynamoDB\n")
+  console.log("Params: \n", params)
 
-  const deleteCommand = new BatchWriteCommand(params);
-  const delete_results = await DBdocclient.send(deleteCommand) // broken
-
-  console.log("Deleted {", delete_results, "} from DynamoDB\n");
+  try {
+    const deleteCommand = new BatchWriteCommand(params);
+    const delete_results = await DBdocclient.send(deleteCommand)
+    console.log("Deleted: \n", delete_results);
+  } catch (err) {
+    console.log("Error deleting from DynamoDB: ", err);
+  }
 
   return
 }
 
 async function deleteItemsFromS3(items: any) {
+  console.log("===== Deleting from S3 =====\n", items)
 
-  console.log("===== Deleting from S3 =====\n{", items, "}\n")
-
+  // create command for deleting from S3
   const deleteCommand = new DeleteObjectsCommand({
     Bucket: BUCKET,
     Delete: {
-      Objects: items.map((item: any) => { // VERIFY THIS IS CORRECT
+      Objects: items.map((item: any) => {
         item = item.Key + ".zip"
         console.log("Item {", item, "} from S3\n")
         return { Key: item }
@@ -69,7 +72,7 @@ async function deleteItemsFromS3(items: any) {
 
   try {
     const Deleted = await S3client.send(deleteCommand);
-    console.log("Deleted {", Deleted, "} from S3 bucket\n");
+    console.log("Deleted: \n", Deleted);
   } catch (err) {
     console.log("Error deleting from S3 Bucket: ", err);
   }
@@ -78,9 +81,9 @@ async function deleteItemsFromS3(items: any) {
 }
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    // log event for debugging
-    // console.log("Received event: ", JSON.stringify(event, null, 2));
     console.log("===== Resetting Registry =====\n")
+
+    // create scan command for DynamoDB
     const scanCommand = new ScanCommand({
       TableName: TABLENAME,
       ProjectionExpression: "id",
@@ -90,14 +93,25 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     let lastKey = null
 
     try {
-      
-
+      // repeat deleting items from S3 and DB until no more items are found
       do {
         var Scanned = await DBdocclient.send(scanCommand);
-        console.log("Scanned {", Scanned, "} from DynamoDB\n");
+        if (Scanned.Count == 0) {
+          console.log("No items found in DynamoDB\n");
+          return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
+            statusCode: 200,
+            body: 'Registry is reset.'
+          }
+        }
+        console.log("Scanned: \n", Scanned);
 
         var partitionKeys = Scanned.Items?.map(item => ({ Key: item.id}));
-        console.log("Items {", partitionKeys, "} from DynamoDB\n");
+        console.log("Items: \n", partitionKeys);
 
         if (partitionKeys) {
           await deleteItemsFromS3(partitionKeys);
@@ -107,20 +121,26 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         lastKey = Scanned.LastEvaluatedKey;
 
       } while (lastKey)
-      
+
         return {
+          headers: {
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+          },
           statusCode: 200,
-          body: JSON.stringify({
-              message: 'Registry is reset.',
-          }),
+          body: 'Registry is reset.'
         }
     } catch (err) {
         console.log(err);
         return {
+          headers: {
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+          },
           statusCode: 500,
-          body: JSON.stringify({
-              message: 'Registry failed to reset',
-          }),
+          body: 'Registry failed to reset.',
       }
     }
 };
