@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, DeleteItemCommand, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
@@ -13,9 +13,9 @@ import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
  *
  */
 
-const client = new DynamoDBClient({});
+const client = new DynamoDBClient();
 const docClient = DynamoDBDocumentClient.from(client);
-const TableName = "registry"
+const TABLENAME = "registry"
 
 const S3client = new S3Client({});
 const BUCKET = "ingested-package-storage"
@@ -23,47 +23,67 @@ const BUCKET = "ingested-package-storage"
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log("===== Deleting Package by id =====\n", event)
 
-    const packageID = event.pathParameters?.id
+    var id = event.pathParameters?.id
 
-    if (!packageID) {
+    console.log("id: ", id)
+
+    // check if id is valid
+    if (!id) {
         return {
             statusCode: 400,
             body: JSON.stringify({
-                message: 'id is required',
+                message: "There is missing field(s) in the PackageID/AuthenticationToken or it is formed improperly, or the AuthenticationToken is invalid.",
             }),
         };
     }
 
+    // Check if package exists
+    const getCommand = new GetItemCommand({
+      TableName: TABLENAME,
+      Key: { id: { S: id } }
+    })
+    try {
+      const getCommandResult = await docClient.send(getCommand)
+      console.log("Get Package: \n", getCommandResult)
+      if (getCommandResult.Item == undefined) {
+        throw new Error("Package does not exist.")
+      }
+    } catch (err) {
+      console.log(err)
+      return {
+        statusCode: 404,
+        body: "Package does not exist."
+      }
+    }
+    
+    // DB command
     const deleteCommandDB = new DeleteItemCommand({
-        TableName: TableName,
-        Key: {
-            id: packageID
-        }
+      TableName: TABLENAME,
+      Key: { id: { S: id } }
     })
 
+    // S3 command
+    id = id + ".zip"
     const deleteCommandS3 = new DeleteObjectCommand({
         Bucket: BUCKET,
-        Key: packageID
+        Key: id
     })
 
+    // attempt to delete package
     try {
       const resultS3 = await S3client.send(deleteCommandS3)
+      console.log("Deleting Package S3: \n", resultS3)
       const resultDB = await docClient.send(deleteCommandDB)
-        console.log("===== Deleting Package by id =====\n", resultDB, resultS3)
-
+      console.log("Deleting Package DB: \n", resultDB)
         return {
             statusCode: 200,
-            body: JSON.stringify({
-                message: 'hello world',
-            }),
-        };
+            body: 'Package is deleted.',
+        }
     } catch (err) {
         console.log(err);
         return {
             statusCode: 500,
-            body: JSON.stringify({
-                message: 'some error happened',
-            }),
-        };
+            body: 'Error occured while trying to Delete package.'
+        }
     }
-};
+}
