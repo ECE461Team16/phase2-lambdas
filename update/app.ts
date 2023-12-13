@@ -60,7 +60,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             const s3 = new AWS.S3();
             const params = {
                 Bucket: 'ingested-package-storage',
-                Key: `${metadata.name}.zip`,
+                Key: `${id}.zip`,
                 Body: binaryData,
             };
             await s3
