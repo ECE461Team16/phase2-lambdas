@@ -71,19 +71,22 @@ function roundtoNearestVersion(version: number, digit: number) {
 }
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-
     console.log("===== Performing packages post =====\n")
 
     const body = event.body
     if (body == undefined) {
       return {
-        statusCode: 500,
-        body: JSON.stringify({
-          message: 'some error happened',
-        }),
+        headers: {
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+        },
+        statusCode: 200,
+        body: 'No packages received.',
       }
     }
     
+    // initialize and get variables from body
     var version = body.Version
     var name = body.Name
     console.log("Version: ", version, " Name: ", name)
@@ -94,6 +97,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     var boundedVersion = 0
     var match = null
     
+    // validate body of input
     if (version.includes("-")) {
       type = TYPES.BOUNDED
       const regex = /\((\d+\.\d+\.\d+)-(\d+\.\d+\.\d+)\)/
@@ -134,15 +138,19 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
     if (!match) {
       return {
-        statusCode: 500,
-        body: JSON.stringify({
-          message: 'Invalid version',
-        }),
+        headers: {
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+        },
+        statusCode: 200,
+        body: 'No packages matched.'
       }
     }
 
     console.log("Match: ", match)
 
+    // create scan command
     const scanCommand = new ScanCommand({
       TableName: TABLENAME,
       ProjectionExpression: "id, version",
@@ -152,55 +160,65 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
       }
     })
     
-    var result = await DBdocclient.send(scanCommand)
-    console.log("Scanned: ", result)
-
-    var items = result.Items
-    console.log("Items: ", items)
-
-    if (result.Count == 0) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          message: 'No packages found',
-        }),
-      }
-    }
-
-    var return_packages = []
-
-    items.forEach(pkg => {
-      console.log("Package: ", pkg)
-      var pkgVer = convertVersionToInt(pkg.version)
-      switch(type) {
-        case TYPES.BOUNDED:
-          if (pkgVer >= requestVersion && pkgVer < boundedVersion) {
-            return_packages.push(pkg)
-          }
-          break;
-        case TYPES.CARAT:
-          if (pkgVer >= requestVersion && pkgVer < roundtoNearestVersion(requestVersion, 2)) {
-            return_packages.push(pkg)
-          }
-          break;
-        case TYPES.TILDE:
-          if (pkgVer >= requestVersion && pkgVer < roundtoNearestVersion(requestVersion, 1)) {
-            return_packages.push(pkg)
-          }  
-          break;
-        default: // EXACT
-          if (pkgVer == requestVersion) {
-            return_packages.push(pkg)
-          }
-      }
-    })
-
-    console.log("Return packages: ", return_packages)
-
     try {
+        // search for packages with the same name
+        var result = await DBdocclient.send(scanCommand)
+        console.log("Scanned: ", result)
+
+        var items = result.Items
+        console.log("Items: ", items)
+
+        if (result.Count == 0) {
+          return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
+            statusCode: 500,
+            body:  'No packages found.',
+          }
+        }
+      
+        var return_packages = []
+      
+        // go through each and determine is it meets criteria
+        items.forEach(pkg => {
+          console.log("Package: ", pkg)
+          var pkgVer = convertVersionToInt(pkg.version)
+          switch(type) {
+            case TYPES.BOUNDED:
+              if (pkgVer >= requestVersion && pkgVer < boundedVersion) {
+                return_packages.push(pkg)
+              }
+              break;
+            case TYPES.CARAT:
+              if (pkgVer >= requestVersion && pkgVer < roundtoNearestVersion(requestVersion, 2)) {
+                return_packages.push(pkg)
+              }
+              break;
+            case TYPES.TILDE:
+              if (pkgVer >= requestVersion && pkgVer < roundtoNearestVersion(requestVersion, 1)) {
+                return_packages.push(pkg)
+              }  
+              break;
+            default: // EXACT
+              if (pkgVer == requestVersion) {
+                return_packages.push(pkg)
+              }
+          }
+        })
+      
+        console.log("Return packages: ", return_packages)
+      
         if (return_packages.length == 0) {
           return {
-            statusCode: 500,
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
+            statusCode: 200,
             body: JSON.stringify({
               message: 'No packages matched',
             }),
@@ -208,21 +226,24 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         }
 
         return {
-            statusCode: 200,
             headers: {
               'Access-Control-Allow-Headers': 'Content-Type',
               'Access-Control-Allow-Origin': '*',
               'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
             },
+            statusCode: 200,
             body: JSON.stringify(return_packages),
         };
     } catch (err) {
         console.log(err);
         return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             statusCode: 500,
-            body: JSON.stringify({
-                message: 'some error happened',
-            }),
+            body: 'Error occured while searching for packages.',
         };
     }
 };
