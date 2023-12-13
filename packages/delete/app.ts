@@ -30,6 +30,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     // check if id is valid
     if (!id) {
         return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             statusCode: 400,
             body: JSON.stringify({
                 message: "There is missing field(s) in the PackageID/AuthenticationToken or it is formed improperly, or the AuthenticationToken is invalid.",
@@ -51,6 +56,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     } catch (err) {
       console.log(err)
       return {
+        headers: {
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+        },
         statusCode: 404,
         body: "Package does not exist."
       }
@@ -76,12 +86,22 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
       const resultDB = await docClient.send(deleteCommandDB)
       console.log("Deleting Package DB: \n", resultDB)
         return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             statusCode: 200,
             body: 'Package is deleted.',
         }
     } catch (err) {
         console.log(err);
         return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             statusCode: 500,
             body: 'Error occured while trying to Delete package.'
         }
