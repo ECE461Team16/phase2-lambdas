@@ -33,10 +33,13 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
   if (event.body == null) {
     return {
-      statusCode: 400,
-      body: JSON.stringify({
-        message: 'missing body',
-      })
+      headers: {
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+      },
+      statusCode: 500,
+      body: 'No body in input.',
     }
   }
 
@@ -45,6 +48,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 
     console.log(regex);
 
+    // create command and inputs
     const params = {
       TableName: TABLENAME,
       ProjectionExpression: "id, version, readme", 
@@ -54,12 +58,27 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         // scan may exceed 1MB, so we need to use pagination
         const scanCommand = new ScanCommand(params);
         const results = await DBdocclient.send(scanCommand);
+
+        if (results.Count == undefined || results.Count == 0) {
+          return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
+            statusCode: 404,
+            body: 'No package found under this regex.',
+          }
+        }
+
+        // use regex to filter out packages
         const packages = results.Items
         console.log("Packages: ", packages)
 
         const regexp = new RegExp(regex)
         let return_packages: any[] = []
 
+        // iterate through packages and check if readme matches regex
         packages.forEach((pkg: any) => {
           var readMe = pkg.readme
           console.log("ReadMe: ", readMe)
@@ -80,6 +99,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         
         console.log("Matches: ", return_packages)
 
+        // format all matches for response
         const outputArray = return_packages.map(item => {
           return {
             "Version": item.version.S,
@@ -88,16 +108,24 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         });
 
         return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             statusCode: 200,
             body: JSON.stringify(outputArray),
         };
     } catch (err) {
         console.log(err);
         return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             statusCode: 500,
-            body: JSON.stringify({
-                message: 'some error happened',
-            }),
+            body: 'Error occured while scanning.'
         };
     }
 };
