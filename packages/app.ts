@@ -72,8 +72,10 @@ function roundtoNearestVersion(version: number, digit: number) {
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log("===== Performing packages post =====\n")
-
+  
+    console.log("Event: \n", event)
     const body = event.body
+    console.log("Body: \n", body)
     if (body == undefined) {
       return {
         headers: {
