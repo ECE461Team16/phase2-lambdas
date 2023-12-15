@@ -170,7 +170,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         var items = result.Items
         console.log("Items: ", items)
 
-        if (result.Count == 0) {
+        if (result.Count == 0 || items == null) {
           return {
             headers: {
               'Access-Control-Allow-Headers': 'Content-Type',
@@ -181,6 +181,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             body:  'No packages found.',
           }
         }
+
+        items = items.map(obj => {
+          return { ...obj, Name: obj.id };
+        })
       
         var return_packages = []
       
