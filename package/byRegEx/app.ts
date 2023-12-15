@@ -29,22 +29,22 @@ async function getReadMes(items: any) {
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log("===== Performing Regex =====\n", event)
-  console.log("Body: ", event.body)
 
-  if (event.body == null) {
-    return {
-      headers: {
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-      },
-      statusCode: 500,
-      body: 'No body in input.',
+    if (event.RegEx == null) {
+      console.log("RETURNING 404\n")
+      return {
+        headers: {
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+        },
+        statusCode: 404,
+        body: 'No package found under this regex.',
+      }
     }
-  }
 
     // ignore error for now
-    const regex = event.body.RegEx
+    var regex = event.RegEx
 
     console.log(regex);
 
@@ -60,6 +60,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         const results = await DBdocclient.send(scanCommand);
 
         if (results.Count == undefined || results.Count == 0) {
+          console.log("RETURNING 404\n")
           return {
             headers: {
               'Access-Control-Allow-Headers': 'Content-Type',
@@ -74,30 +75,23 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         // use regex to filter out packages
         const packages = results.Items
         console.log("Packages: ", packages)
+        regex = regex.replace(/\//g, "")
 
-        const regexp = new RegExp(regex)
+        var regexp = new RegExp(regex)
+        console.log("Regexp:\n", regexp)
         let return_packages: any[] = []
 
         // iterate through packages and check if readme matches regex
         packages.forEach((pkg: any) => {
           var readMe = pkg.readme
           console.log("ReadMe: ", readMe)
+          console.log("Test: ", regexp.test(readMe.S))
           if (regexp.test(readMe.S)) {
             return_packages.push(pkg)
           }
         })
 
-        // const readMestrings = packages?.map((pkg: any) => pkg.readme.S)
-        // console.log("ReadMes: ", readMestrings)
-
-        // for (var pkg in packages) {
-        //   var readMe = pkg.readme.S
-        //   console.log("ReadMe: ", readMe)
-        //   if (regexp.test(readMe)) {
-        //     return_packages.push(package)
-        //   }
-        
-        console.log("Matches: ", return_packages)
+        console.log("Matches:\n", return_packages)
 
         // format all matches for response
         const outputArray = return_packages.map(item => {
@@ -107,6 +101,22 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
           };
         });
 
+        console.log("Output: \n", outputArray)
+
+        if (outputArray.length == 0) {
+          console.log("RETURNING 404\n")
+          return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
+            statusCode: 404,
+            body: 'No package found under this regex.',
+          }
+        }
+
+        console.log("RETURNING 200\n")
         return {
             headers: {
               'Access-Control-Allow-Headers': 'Content-Type',
@@ -117,6 +127,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             body: JSON.stringify(outputArray),
         };
     } catch (err) {
+        console.log("RETURNING 500\n")
         console.log(err);
         return {
             headers: {
