@@ -6,6 +6,17 @@ const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const TableName = 'registry';
 
+interface ResponseBody {
+    NetScore: number;
+    RampUp: number;
+    Correctness: number;
+    BusFactor: number;
+    ResponsiveMaintainer: number;
+    LicenseScore: number;
+    GoodPinningPractice: number;
+    PullRequest: number;
+}
+
 //TODO: Update score, Update S3 bucket
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     console.log(event);
@@ -33,10 +44,26 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     try {
         const result = await docClient.send(getCommand);
         console.log(result.Item);
+        const keyMapping: Record<string, keyof ResponseBody> = {
+            NET_SCORE: 'NetScore',
+            RAMP_UP_SCORE: 'RampUp',
+            CORRECTNESS_SCORE: 'Correctness',
+            BUS_FACTOR_SCORE: 'BusFactor',
+            RESPONSIVE_MAINTAINER_SCORE: 'ResponsiveMaintainer',
+            LICENSE_SCORE: 'LicenseScore',
+            DEPENDENCE_SCORE: 'GoodPinningPractice',
+            REVIEWED_CODE_SCORE: 'PullRequest',
+        };
+
         if (result.Item) {
+            const newData: ResponseBody = Object.fromEntries(
+                Object.entries(JSON.parse(result.Item.ratings)).map(([key, value]) => [keyMapping[key], value])
+              );
+
+            console.log(newData);
             return {
                 statusCode: 200,
-                body: JSON.stringify(result.Item.ratings),
+                body: JSON.stringify(newData),
                 headers: {
                     'Access-Control-Allow-Headers': 'Content-Type',
                     'Access-Control-Allow-Origin': '*',
