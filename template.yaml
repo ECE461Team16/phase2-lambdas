@@ -31,6 +31,28 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+  packagesFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: packages
+      Handler: app.lambdaHandler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: registry
+      Environment:
+        Variables:
+          TABLE_NAME: registry
+      Runtime: nodejs18.x
+      Architectures:
+      - x86_64
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - app.ts
 
   UpdateFunction:
     Type: AWS::Serverless::Function # More info about Function Resource:
