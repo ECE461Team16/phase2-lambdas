@@ -29,22 +29,21 @@ async function getReadMes(items: any) {
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log("===== Performing Regex =====\n", event)
-  console.log("Body: ", event.body)
 
-  if (event.body == null) {
-    return {
-      headers: {
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
-      },
-      statusCode: 500,
-      body: 'No body in input.',
+    if (event.RegEx == null) {
+      return {
+        headers: {
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+        },
+        statusCode: 500,
+        body: 'No body in input.',
+      }
     }
-  }
 
     // ignore error for now
-    const regex = event.body.RegEx
+    const regex = event.RegEx
 
     console.log(regex);
 
