@@ -1,3 +1,5 @@
 {
-    "path": "smalles"
+    "pathParameters": {
+        "id": "fecha"
+    }
 }
