@@ -31,7 +31,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
   console.log("===== Performing Regex =====\n", event)
 
     if (event.RegEx == null) {
-      console.log("RETURNING 500\n")
+      console.log("RETURNING 404\n")
       return {
         headers: {
           'Access-Control-Allow-Headers': 'Content-Type',
@@ -39,7 +39,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
           'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
         },
         statusCode: 500,
-        body: 'No body in input.',
+        body: 'No package found under this regex.',
       }
     }
 
@@ -83,22 +83,24 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         packages.forEach((pkg: any) => {
           var readMe = pkg.readme
           console.log("ReadMe: ", readMe)
-          if (regexp.test(readMe.S)) {
+          console.log("Test: ", regexp.test(readMe.S))
+          if (regexp.exec(readMe.S)) {
             return_packages.push(pkg)
           }
         })
 
-        // const readMestrings = packages?.map((pkg: any) => pkg.readme.S)
-        // console.log("ReadMes: ", readMestrings)
+        console.log("Matches 1:\n", return_packages)
 
-        // for (var pkg in packages) {
-        //   var readMe = pkg.readme.S
-        //   console.log("ReadMe: ", readMe)
-        //   if (regexp.test(readMe)) {
-        //     return_packages.push(package)
-        //   }
+        packages.forEach((pkg: any) => {
+          var readMe = pkg.readme
+          console.log("ReadMe: ", readMe)
+          console.log("Test: ", readMe.S.match(regexp))
+          if (readMe.S.match(regexp)) {
+            return_packages.push(pkg)
+          }
+        })
         
-        console.log("Matches: ", return_packages)
+        console.log("Matches 2:\n", return_packages)
 
         // format all matches for response
         const outputArray = return_packages.map(item => {
@@ -109,6 +111,19 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         });
 
         console.log("Output: \n", outputArray)
+
+        if (outputArray.length == 0) {
+          console.log("RETURNING 404\n")
+          return {
+            headers: {
+              'Access-Control-Allow-Headers': 'Content-Type',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
+            statusCode: 500,
+            body: 'No package found under this regex.',
+          }
+        }
 
         console.log("RETURNING 200\n")
         return {
