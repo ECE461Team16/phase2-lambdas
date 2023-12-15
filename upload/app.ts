@@ -200,7 +200,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
                 'Access-Control-Allow-Methods': '*',
             },
             body: JSON.stringify({
-                meteadata: {
+                metadata: {
                     Name: packageData.name,
                     Version: packageData.version,
                     ID: packageData.name.toLowerCase(),
