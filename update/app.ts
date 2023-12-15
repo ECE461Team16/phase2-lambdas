@@ -43,7 +43,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     const getCommand = new GetCommand({
         TableName: TableName,
         Key: {
-            id: metadata.ID,
+            id: id,
         },
     });
 
