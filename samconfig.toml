@@ -1,4 +1,4 @@
-# More information about the configuration file can be found here:
+# More information about the configuration file can be found:
 # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
 version = 0.1
 
