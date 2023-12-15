@@ -38,13 +38,13 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
         },
-        statusCode: 500,
+        statusCode: 404,
         body: 'No package found under this regex.',
       }
     }
 
     // ignore error for now
-    const regex = event.RegEx
+    var regex = event.RegEx
 
     console.log(regex);
 
@@ -75,8 +75,10 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         // use regex to filter out packages
         const packages = results.Items
         console.log("Packages: ", packages)
+        regex = regex.replace(/\//g, "")
 
-        const regexp = new RegExp(regex)
+        var regexp = new RegExp(regex)
+        console.log("Regexp:\n", regexp)
         let return_packages: any[] = []
 
         // iterate through packages and check if readme matches regex
@@ -84,23 +86,12 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
           var readMe = pkg.readme
           console.log("ReadMe: ", readMe)
           console.log("Test: ", regexp.test(readMe.S))
-          if (regexp.exec(readMe.S)) {
+          if (regexp.test(readMe.S)) {
             return_packages.push(pkg)
           }
         })
 
-        console.log("Matches 1:\n", return_packages)
-
-        packages.forEach((pkg: any) => {
-          var readMe = pkg.readme
-          console.log("ReadMe: ", readMe)
-          console.log("Test: ", readMe.S.match(regexp))
-          if (readMe.S.match(regexp)) {
-            return_packages.push(pkg)
-          }
-        })
-        
-        console.log("Matches 2:\n", return_packages)
+        console.log("Matches:\n", return_packages)
 
         // format all matches for response
         const outputArray = return_packages.map(item => {
@@ -120,7 +111,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
               'Access-Control-Allow-Origin': '*',
               'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
             },
-            statusCode: 500,
+            statusCode: 404,
             body: 'No package found under this regex.',
           }
         }
