@@ -21,7 +21,14 @@ Resources:
       MemorySize: 1024
       Architectures:
         - x86_64
-
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - app.ts
   UploadFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -40,7 +47,6 @@ Resources:
           - app.ts
         External:
           - "aws-sdk"
-
   GetFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -59,7 +65,6 @@ Resources:
           - app.ts
         External:
           - "aws-sdk"
-
   RateFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -78,7 +83,6 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
-
   getRating:
     Type: AWS::Serverless::Function # More info about Function Resource:
     Properties:
