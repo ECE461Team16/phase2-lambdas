@@ -18,6 +18,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         if (!id) {
             return {
                 statusCode: 400,
+                headers: {
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                },
                 body: JSON.stringify({
                     message: 'Invalid request: ID is required',
                 }),
@@ -36,6 +41,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         if (data.Item === undefined || data.Item === null) {
             return {
                 statusCode: 404,
+                headers: {
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                },
                 body: JSON.stringify({
                     message: 'Package does not exist',
                 }),
@@ -47,6 +57,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         if (name === undefined || version === undefined) {
             return {
                 statusCode: 500,
+                headers: {
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                },
                 body: JSON.stringify({
                     message: 'error: invalid package entry found',
                 }),
@@ -88,6 +103,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         console.log(err);
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            },
             body: JSON.stringify({
                 message: 'error',
             }),

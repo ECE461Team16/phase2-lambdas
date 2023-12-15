@@ -15,8 +15,6 @@ import AWS from 'aws-sdk';
 
 export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
-        console.log('event', event);
-
         let content;
         let url;
         if (event.body) {
@@ -30,6 +28,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         if (!content && !url) {
             return {
                 statusCode: 400,
+                headers: {
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': '*',
+                },
                 body: JSON.stringify({
                     message: 'Invalid request: Content or URL is required',
                 }),
@@ -85,6 +88,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         } else {
             return {
                 statusCode: 400,
+                headers: {
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': '*',
+                },
                 body: JSON.stringify({
                     message: 'Invalid request: Malformed request',
                 }),
@@ -95,6 +103,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         if (packageData.name === '' || packageData.version === '' || packageData.repository === '') {
             return {
                 statusCode: 400,
+                headers: {
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': '*',
+                },
                 body: JSON.stringify({
                     message: 'Invalid request: Package does not contain necessary information',
                 }),
@@ -112,6 +125,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         if (data.Item !== undefined && data.Item !== null) {
             return {
                 statusCode: 409,
+                headers: {
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': '*',
+                },
                 body: JSON.stringify({
                     message: 'Package already exists',
                 }),
@@ -196,6 +214,11 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         console.log(err);
         return {
             statusCode: 500,
+            headers: {
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': '*',
+            },
             body: JSON.stringify({
                 message: 'error',
             }),
