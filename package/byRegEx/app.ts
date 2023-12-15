@@ -31,6 +31,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
   console.log("===== Performing Regex =====\n", event)
 
     if (event.RegEx == null) {
+      console.log("RETURNING 500\n")
       return {
         headers: {
           'Access-Control-Allow-Headers': 'Content-Type',
@@ -59,6 +60,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
         const results = await DBdocclient.send(scanCommand);
 
         if (results.Count == undefined || results.Count == 0) {
+          console.log("RETURNING 404\n")
           return {
             headers: {
               'Access-Control-Allow-Headers': 'Content-Type',
@@ -106,6 +108,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
           };
         });
 
+        console.log("Output: \n", outputArray)
+
+        console.log("RETURNING 200\n")
         return {
             headers: {
               'Access-Control-Allow-Headers': 'Content-Type',
@@ -116,6 +121,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
             body: JSON.stringify(outputArray),
         };
     } catch (err) {
+        console.log("RETURNING 500\n")
         console.log(err);
         return {
             headers: {
