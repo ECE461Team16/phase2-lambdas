@@ -1,0 +1,13 @@
+{
+    "metadata": {
+      "Name": "smallest",
+      "Version": "1.0.0",
+      "ID": "smallest"
+    },
+    "data": {
+      "Content": "changedstring",
+      "URL": "https://github.com/cloudinary/cloudinary_npm",
+      "JSProgram": "string"
+    }
+  }
+  
